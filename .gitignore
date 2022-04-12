@@ -1,0 +1,10 @@
+# Target
+/logger
+/logger.so
+
+# Exclude dir
+/ans/*
+
+# Exclude extensions
+*.txt
+*.o
