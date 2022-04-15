@@ -59,11 +59,11 @@ static void logger_init(void)
 
 int chmod(const char *pathname, mode_t mode)
 {
-    logger_init();
-
     int ret;
     const char *p;
     char realpath_buf[BUFSIZE];
+
+    logger_init();
 
     p = realpath(pathname, realpath_buf);
     if (!p) {
@@ -79,11 +79,11 @@ int chmod(const char *pathname, mode_t mode)
 
 int chown(const char *pathname, uid_t owner, gid_t group)
 {
-    logger_init();
-
     int ret;
     const char *p;
     char realpath_buf[BUFSIZE];
+
+    logger_init();
 
     p = realpath(pathname, realpath_buf);
     if (!p) {
@@ -100,11 +100,11 @@ int chown(const char *pathname, uid_t owner, gid_t group)
 
 int close(int fd)
 {
-    logger_init();
-
     int ret, len;
     char fdpath[BUFSIZE];
     char path[BUFSIZE];
+
+    logger_init();
 
     snprintf(fdpath, BUFSIZE, "/proc/self/fd/%d", fd);
     if ((len = readlink(fdpath, path, BUFSIZE - 1)) == -1) {
@@ -121,11 +121,11 @@ int close(int fd)
 
 int creat(const char *pathname, mode_t mode)
 {
-    logger_init();
-
     int ret;
     const char *p;
     char realpath_buf[BUFSIZE];
+
+    logger_init();
 
     p = realpath(pathname, realpath_buf);
     if (!p) {
@@ -141,11 +141,11 @@ int creat(const char *pathname, mode_t mode)
 
 int fclose(FILE *stream)
 {
-    logger_init();
-
     int ret, fd, len;
     char fdpath[BUFSIZE];
     char path[BUFSIZE];
+
+    logger_init();
 
     fd = fileno(stream);
 
@@ -164,11 +164,11 @@ int fclose(FILE *stream)
 
 FILE *fopen(const char *pathname, const char *mode)
 {
-    logger_init();
-
     FILE *ret;
     const char *p;
     char realpath_buf[BUFSIZE];
+
+    logger_init();
 
     p = realpath(pathname, realpath_buf);
     if (!p) {
@@ -184,12 +184,13 @@ FILE *fopen(const char *pathname, const char *mode)
 
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
-    logger_init();
-
     size_t ret;
     int len, fd;
     char fdpath[BUFSIZE];
     char path[BUFSIZE];
+    char content[0x21];
+
+    logger_init();
 
     fd = fileno(stream);
 
@@ -201,8 +202,6 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
 
     ret = real_fread(ptr, size, nmemb, stream);
 
-    dprintf(ofd, "[logger] fread(\"");
-
     len = 0;
     while (len < 32) {
         int c = *((char *)ptr + len);
@@ -210,27 +209,30 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
         if (!c) {
             break;
         } else if (isprint(c)) {
-            dprintf(ofd, "%c", c);
+            content[len] = c;
         } else {
-            dprintf(ofd, ".");
+            content[len] = '.';
         }
 
         len++;
     }
-    
-    dprintf(ofd, "\", %ld, %ld, \"%s\") = %ld\n", size, nmemb, path, ret);
+    content[len] = 0;
+
+    dprintf(ofd, "[logger] fread(\"%s\", %ld, %ld, \"%s\") = %ld\n", 
+            content, size, nmemb, path, ret);
 
     return ret;
 }
 
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
-    logger_init();
-
     size_t ret;
     int len, fd;
     char fdpath[BUFSIZE];
     char path[BUFSIZE];
+    char content[0x21];
+
+    logger_init();
 
     fd = fileno(stream);
 
@@ -242,8 +244,6 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 
     ret = real_fwrite(ptr, size, nmemb, stream);
 
-    dprintf(ofd, "[logger] fwrite(\"");
-
     len = 0;
     while (len < 32) {
         int c = *((char *)ptr + len);
@@ -251,32 +251,29 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
         if (!c) {
             break;
         } else if (isprint(c)) {
-            dprintf(ofd, "%c", c);
+            content[len] = c;
         } else {
-            dprintf(ofd, ".");
+            content[len] = '.';
         }
 
         len++;
     }
-    
-    dprintf(ofd, "\", %ld, %ld, \"%s\") = %ld\n", size, nmemb, path, ret);
+    content[len] = 0;
+
+    dprintf(ofd, "[logger] fwrite(\"%s\", %ld, %ld, \"%s\") = %ld\n", 
+            content, size, nmemb, path, ret);
 
     return ret;
 }
 
 int open(const char *pathname, int flags, ...)
 {
-    logger_init();
-
     int ret, mode;
     va_list ap;
     const char *p;
     char realpath_buf[BUFSIZE];
 
-    p = realpath(pathname, realpath_buf);
-    if (!p) {
-        p = pathname;
-    }
+    logger_init();
 
     va_start(ap, flags);
 
@@ -284,6 +281,11 @@ int open(const char *pathname, int flags, ...)
         mode = va_arg(ap, int);
     } else {
         mode = 0;
+    }
+
+    p = realpath(pathname, realpath_buf);
+    if (!p) {
+        p = pathname;
     }
 
     ret = real_open(pathname, flags, mode);
@@ -298,12 +300,13 @@ int open(const char *pathname, int flags, ...)
 
 ssize_t read(int fd, void *buf, size_t count)
 {
-    logger_init();
-
     ssize_t ret;
     int len;
     char fdpath[BUFSIZE];
     char path[BUFSIZE];
+    char content[0x21];
+
+    logger_init();
 
     snprintf(fdpath, BUFSIZE, "/proc/self/fd/%d", fd);
     if ((len = readlink(fdpath, path, BUFSIZE - 1)) == -1) {
@@ -313,8 +316,6 @@ ssize_t read(int fd, void *buf, size_t count)
 
     ret = real_read(fd, buf, count);
 
-    dprintf(ofd, "[logger] read (\"%s\", \"", path);
-
     len = 0;
     while (len < 32) {
         int c = *((char *)buf + len);
@@ -322,26 +323,28 @@ ssize_t read(int fd, void *buf, size_t count)
         if (!c) {
             break;
         } else if (isprint(c)) {
-            dprintf(ofd, "%c", c);
+            content[len] = c;
         } else {
-            dprintf(ofd, ".");
+            content[len] = '.';
         }
 
         len++;
     }
-
-    dprintf(ofd, "\", %ld) = %ld\n", count, ret);
+    content[len] = 0;
+    
+    dprintf(ofd, "[logger] read(\"%s\", \"%s\", %ld) = %ld\n", 
+            path, content, count, ret);
 
     return ret; 
 }
 
 int remove(const char *pathname)
 {
-    logger_init();
-
     int ret;
     const char *p;
     char realpath_buf[BUFSIZE];
+    
+    logger_init();
 
     p = realpath(pathname, realpath_buf);
     if (!p) {
@@ -357,12 +360,12 @@ int remove(const char *pathname)
 
 int rename(const char *oldpath, const char *newpath)
 {
-    logger_init();
-
     int ret;
     const char *p1, *p2;
     char realpath1[BUFSIZE];
     char realpath2[BUFSIZE];
+    
+    logger_init();
 
     p1 = realpath(oldpath, realpath1);
     if (!p1) {
@@ -383,9 +386,9 @@ int rename(const char *oldpath, const char *newpath)
 
 FILE *tmpfile(void)
 {
-    logger_init();
-
     FILE *ret;
+    
+    logger_init();
 
     ret = real_tmpfile();
 
@@ -396,12 +399,13 @@ FILE *tmpfile(void)
 
 ssize_t write(int fd, const void *buf, size_t count)
 {
-    logger_init();
-
     ssize_t ret;
     int len;
     char fdpath[BUFSIZE];
     char path[BUFSIZE];
+    char content[0x21];
+    
+    logger_init();
 
     snprintf(fdpath, BUFSIZE, "/proc/self/fd/%d", fd);
     if ((len = readlink(fdpath, path, BUFSIZE - 1)) == -1) {
@@ -411,8 +415,6 @@ ssize_t write(int fd, const void *buf, size_t count)
 
     ret = real_write(fd, buf, count);
 
-    dprintf(ofd, "[logger] write(\"%s\", \"", path);
-
     len = 0;
     while (len < 32) {
         int c = *((char *)buf + len);
@@ -420,15 +422,17 @@ ssize_t write(int fd, const void *buf, size_t count)
         if (!c) {
             break;
         } else if (isprint(c)) {
-            dprintf(ofd, "%c", c);
+            content[len] = c;
         } else {
-            dprintf(ofd, ".");
+            content[len] = '.';
         }
 
         len++;
     }
+    content[len] = 0;
 
-    dprintf(ofd, "\", %ld) = %ld\n", count, ret);
+    dprintf(ofd, "[logger] write(\"%s\", \"%s\", %ld) = %ld\n", 
+            path, content, count, ret);
 
     return ret; 
 }

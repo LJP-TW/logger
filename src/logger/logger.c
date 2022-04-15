@@ -65,9 +65,8 @@ int main(int argc, char **argv, char **envp)
     }
 
     if (file_fd == 2) {
-        // Redirect fd 2 to fd 3
-        dup2(2, 3);
-        file_fd = 3;
+        // Redirect fd 2 to another fd
+        file_fd = dup(2);
     }
 
     /* Prepare envp */
